@@ -1,13 +1,249 @@
-body {
+/* GENERAL */
+body,
+html,
+#root {
+  height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+input::placeholder {
+  color: black;
+  font-weight: bold;
+}
+
+.app-container {
+  display: flex;
+  height: 100%;
+}
+
+input,
+select,
+button {
+  width: 100%;
+  padding: 8px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+button:hover {
+  background-color: #b40000 !important;
+  transition: .5s;
+}
+
+select option:hover {
+  background-color: #E8E8E8;
+}
+
+/* RIGHT PART */
+.map-container {
+  width: 75%;
+  height: 100%;
+}
+
+/* LEFT PART */
+.sidebar {
+  width: 25%;
+  padding: 1rem;
+  padding-top: 0rem;
+  background-color: #fefefe;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+/* title */
+.zoneTitle {
+  background-color: #E8E8E8;
+  width: 60%;
+  text-align: center;
+  border-bottom-left-radius: 10rem;
+  border-bottom-right-radius: 10rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0.5rem;
+  margin-bottom: 20px;
+  padding-bottom: 0.5rem;
+}
+
+#title {
+  font-weight: bold;
+  font-size: 24px;
+  margin: 0;
+  text-align: center;
+}
+
+h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* vehicle selector */
+.zoneChooseYourVehicle {
+  background-color: #D9D9D9;
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 0.50rem;
+  padding-right: 0.50rem;
+  padding-top: 0.01rem;
+  padding-bottom: 0.01rem;
+  border-radius: 15px;
+}
+
+.chooseVehicle {
+  position: relative;
+  background-color: #fefefe;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 8px 0;
+  padding: 8px;
+  cursor: 'pointer'
+}
+
+/* First address entry */
+.zoneBaseAddress {
+  background-color: #D9D9D9;
+  padding-left: 0.50rem;
+  padding-right: 0.50rem;
+  border-radius: 15px;
+  margin-top: 20px;
+  padding-bottom: 0.5rem;
+}
+
+.autocomplete {
+  position: relative;
+  border: none;
+  border-radius: 10px;
+}
+
+.entryBaseAddress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fefefe;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+  border-radius: 5px;
+}
+
+/* Second address entry */
+.zoneSecondAddress {
+  background-color: #D9D9D9;
+  padding-left: 0.50rem;
+  padding-right: 0.50rem;
+  border-radius: 15px;
+  margin-top: 20px;
+  padding-bottom: 0.1px;
+}
+
+.entrySecondAddress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fefefe;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+}
+
+.yourFollowingAddress {
+  width: auto;
+  padding-left: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin: 0;
+  font-size: 11px;
+}
+
+/* Information */
+.zoneInformation {
+  margin-top: 20px;
+  border: solid, 5px, #E8E8E8;
+  border-radius: 15px;
+}
+
+.informationTitle {
+  text-align: center;
+  background-color: #E8E8E8;
+  padding-top: 0.5rem;
+  padding-bottom: 0.3rem;
+}
+
+.totalInformation {
+  margin-left: 0.5rem;
+  font-size: 15px;
+}
+
+/* Responsive */
+
+/* TABLET */
+@media (max-width: 1024px) {
+
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* RIGHT PART */
+  .map-container {
+    width: 100%;
+    height: 60%;
+  }
+
+  /* LEFT PART */
+  .sidebar {
+    height: 40%;
+    width: 100%;
+    padding: 8rem;
+    padding-top: 0rem;
+    background-color: #fefefe;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  #title {
+    font-weight: bold;
+    font-size: 20px;
+    margin: 0;
+    text-align: center;
+  }
+
+}
+
+
+/* SMARTPHONE */
+@media (max-width: 767px) {
+
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* RIGHT PART */
+  .map-container {
+    width: 100%;
+    height: 60%;
+  }
+
+  /* LEFT PART */
+  .sidebar {
+    height: 40%;
+    width: 100%;
+    padding: 2rem;
+    padding-top: 0rem;
+    background-color: #fefefe;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  #title {
+    font-weight: bold;
+    font-size: 20px;
+    margin: 0;
+    text-align: center;
+  }
 }
