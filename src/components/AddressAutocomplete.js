@@ -1,4 +1,3 @@
-// src/components/AddressAutocomplete.js
 import React, { useState, useEffect, useRef } from 'react';
 
 const AddressAutocomplete = ({ placeholder, onSelect }) => {

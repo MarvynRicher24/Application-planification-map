@@ -1,4 +1,3 @@
-// src/components/CustomSelect.js
 import React, { useState, useRef, useEffect } from 'react';
 
 const CustomSelect = ({ value, onChange, options, placeholder }) => {

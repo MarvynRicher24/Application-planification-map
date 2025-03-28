@@ -1,4 +1,3 @@
-// src/components/Sidebar.js
 import React from 'react';
 import AddressAutocomplete from './AddressAutocomplete';
 import CustomSelect from './CustomSelect';
@@ -31,6 +30,113 @@ const Sidebar = ({
 
   const handleDeleteBase = () => {
     setBaseAddress(null);
+  };
+
+  // Fonction pour géocoder une adresse via l'API Nominatim
+  const geocodeAddress = async (query) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const result = data[0];
+        return {
+          address: result.display_name,
+          lat: parseFloat(result.lat),
+          lon: parseFloat(result.lon),
+        };
+      }
+      console.warn("Address not found : ", query);
+      return null;
+    } catch (error) {
+      console.error("Error during geocoding : ", error);
+      return null;
+    }
+  };
+
+  // Fonction de traitement de l'import de fichier
+  const handleFileImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      let importedAddresses = [];
+      // Détection de l'extension du fichier
+      if (file.name.toLowerCase().endsWith('.json')) {
+        try {
+          const data = JSON.parse(text);
+          // On suppose que le fichier JSON contient un tableau d'objets
+          // avec des clés pouvant être "address" ou des coordonnées "lat" et "lon"
+          importedAddresses = data.map(item => {
+            if (item.lat && item.lon) {
+              return {
+                address: item.address || `${item.lat}, ${item.lon}`,
+                lat: parseFloat(item.lat),
+                lon: parseFloat(item.lon),
+              };
+            }
+            // Sinon, on peut effectuer une concaténation d'éventuels champs d'adresse
+            return {
+              address: item.address || `${item.street || ''} ${item.city || ''} ${item.postalCode || ''} ${item.country || ''}`.trim(),
+              lat: item.lat ? parseFloat(item.lat) : null,
+              lon: item.lon ? parseFloat(item.lon) : null,
+            };
+          });
+        } catch (error) {
+          console.error("JSON parsing error ::", error);
+          alert("File format not supported. Please import a JSON or CSV file.");
+          return;
+        }
+      } else if (file.name.toLowerCase().endsWith('.csv')) {
+        // Simple parser CSV : on suppose une première ligne d'entêtes
+        try {
+          const lines = text.split(/\r?\n/);
+          if (lines.length < 2) throw new Error("CSV vide ou mal formaté");
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          importedAddresses = lines.slice(1).reduce((acc, line) => {
+            if (line.trim() === "") return acc;
+            const values = line.split(',');
+            let item = {};
+            headers.forEach((header, index) => {
+              item[header] = values[index] ? values[index].trim() : "";
+            });
+            // Construction de l'objet adresse
+            acc.push({
+              address: item.address || `${item.street || ''} ${item.city || ''} ${item.postalCode || ''} ${item.country || ''}`.trim(),
+              lat: item.lat ? parseFloat(item.lat) : null,
+              lon: item.lon ? parseFloat(item.lon) : null,
+            });
+            return acc;
+          }, []);
+        } catch (error) {
+          console.error("CSV parsing error :", error);
+          alert("File format not supported. Please import a JSON or CSV file.");
+          return;
+        }
+      };
+
+      // Validation des adresses : géocoder celles qui n'ont pas de coordonnées
+      const validatedAddresses = await Promise.all(
+        importedAddresses.map(async (addr) => {
+          if (addr.lat && addr.lon) return addr;
+          // Utiliser la chaîne d'adresse pour géocoder
+          return await geocodeAddress(addr.address);
+        })
+      );
+      // Filtrer les adresses non validées (null)
+      const validAddresses = validatedAddresses.filter(a => a !== null);
+      if (validAddresses.length > 0) {
+        setFollowingAddresses([...followingAddresses, ...validAddresses]);
+        alert("Success, the file is imported");
+      } else {
+        alert("File format not supported. Please import a JSON or CSV file.");
+      }
+    };
+
+    reader.readAsText(file);
   };
 
   // Formatage du temps (en minutes) en h et min
@@ -85,7 +191,7 @@ const Sidebar = ({
         {baseAddress && (
           <div className='entryBaseAddress'>
             <span style={{ width: "90%", fontSize: "14px" }}>{baseAddress.address}</span>
-            <button onClick={handleDeleteBase} style={{ width: '3rem', background: '#e8e8e8', fontSize: '16px', cursor: 'pointer', border: "none", borderRadius: "10px" }}>×</button>
+            <button className='deleteButton' onClick={handleDeleteBase}>×</button>
           </div>
         )}
       </div>
@@ -95,11 +201,26 @@ const Sidebar = ({
           placeholder="Enter following address"
           onSelect={handleFollowingSelect}
         />
-        <h2 className='yourFollowingAddress'>Your following address :</h2>
+
+        {/* Ajout de l'input d'import de fichier */}
+        <div className='fileImport'>
+          <label htmlFor="fileImport" className="fileImportButton">
+            Import file
+            <input
+              id="fileImport"
+              type="file"
+              accept=".json, .csv"
+              onChange={handleFileImport}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+
+        <h2 className='yourFollowingAddress'>Your following address(es) :</h2>
         {followingAddresses.map((addr, index) => (
           <div key={index} className='entrySecondAddress'>
             <span style={{ width: "90%", fontSize: "14px" }}>{addr.address}</span>
-            <button onClick={() => handleDeleteFollowing(index)} style={{ width: '3rem', background: '#e8e8e8', fontSize: '16px', cursor: 'pointer', border: "none", borderRadius: "10px" }}>×</button>
+            <button className='deleteButton' onClick={() => handleDeleteFollowing(index)}>×</button>
           </div>
         ))}
       </div>

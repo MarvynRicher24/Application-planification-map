@@ -121,8 +121,6 @@ function App() {
       const footprint = (routeInfo.distance / 1000) * vehicleData[vehicle].emission;
       setCarbonFootprint(footprint.toFixed(2));
 
-      // --- Nouveau calcul du temps total via OpenRouteService ---
-      // Remplacez "YOUR_ORS_API_KEY" par votre clé API OpenRouteService.
       // --- Nouveau calcul du "Total Time" via OpenRouteService ---
       try {
         // Sélection du profil ORS en fonction du véhicule choisi
@@ -135,23 +133,23 @@ function App() {
           byFoot: "foot-walking"
         };
         const profile = profileMapping[vehicle] || "driving-car";
-
+      
         const orsUrl = `https://api.openrouteservice.org/v2/directions/${profile}/geojson`;
         const orsBody = JSON.stringify({
           coordinates: optimizedPoints.map(pt => [pt.lon, pt.lat])
         });
-
+      
         const orsResponse = await fetch(orsUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': '5b3ce3597851110001cf62482990c084e35f41e1b1cdafe113a39b59'  // Remplacez par votre clé ORS
+            'Authorization': '5b3ce3597851110001cf62482990c084e35f41e1b1cdafe113a39b59'
           },
           body: orsBody
         });
-
+      
         const orsData = await orsResponse.json();
-
+      
         if (
           orsData &&
           orsData.features &&
@@ -160,8 +158,11 @@ function App() {
           orsData.features[0].properties.segments &&
           orsData.features[0].properties.segments.length > 0
         ) {
-          const orsDurationSec = orsData.features[0].properties.segments[0].duration;
-          setTotalTime(Math.floor(orsDurationSec / 60));
+          // On somme la durée de tous les segments
+          const totalDurationSec = orsData.features[0].properties.segments.reduce(
+            (sum, segment) => sum + segment.duration, 0
+          );
+          setTotalTime(Math.floor(totalDurationSec / 60));
         } else {
           // Fallback : utiliser le calcul initial
           setTotalTime(Math.floor((routeInfo.distance / 1000) / vehicleData[vehicle].speed * 60));
