@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AddressAutocomplete from './AddressAutocomplete';
 import CustomSelect from './CustomSelect';
 
@@ -30,6 +30,39 @@ const Sidebar = ({
 
   const handleDeleteBase = () => {
     setBaseAddress(null);
+    setGpsUsed(false);
+  };
+
+  const [gpsUsed, setGpsUsed] = useState(false);
+
+  // Nouveaux états pour le message d'erreur et le succès lors de l'import de fichier
+  const [fileError, setFileError] = useState('');
+  const [importedFileName, setImportedFileName] = useState('');
+
+  // Fonction pour utiliser les coordonnées GPS de l'utilisateur et géocoder l'adresse via Nominatim
+  const handleUseGpsCoordinates = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const data = await response.json();
+          if (data && data.display_name) {
+            setBaseAddress({
+              address: data.display_name,
+              lat: latitude,
+              lon: longitude,
+            });
+            setGpsUsed(true);
+          } else {
+          }
+        } catch (error) {
+          console.error("Reverse geocoding error :", error);
+        }
+      }, (error) => {
+        console.error("Geolocation error :", error);
+      });
+    };
   };
 
   // Fonction pour géocoder une adresse via l'API Nominatim
@@ -57,6 +90,10 @@ const Sidebar = ({
 
   // Fonction de traitement de l'import de fichier
   const handleFileImport = (e) => {
+    // Réinitialiser les messages de retour
+    setFileError('');
+    setImportedFileName('');
+
     const file = e.target.files[0];
     if (!file) return;
 
@@ -87,14 +124,14 @@ const Sidebar = ({
           });
         } catch (error) {
           console.error("JSON parsing error ::", error);
-          alert("File format not supported. Please import a JSON or CSV file.");
+          setFileError("File format not supported. Please import a JSON or CSV file.");
           return;
         }
       } else if (file.name.toLowerCase().endsWith('.csv')) {
         // Simple parser CSV : on suppose une première ligne d'entêtes
         try {
           const lines = text.split(/\r?\n/);
-          if (lines.length < 2) throw new Error("CSV vide ou mal formaté");
+          if (lines.length < 2) throw new Error("Empty or badly formatted CSV");
           const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
           importedAddresses = lines.slice(1).reduce((acc, line) => {
             if (line.trim() === "") return acc;
@@ -113,10 +150,9 @@ const Sidebar = ({
           }, []);
         } catch (error) {
           console.error("CSV parsing error :", error);
-          alert("File format not supported. Please import a JSON or CSV file.");
+          setFileError("File format not supported. Please import a JSON or CSV file.");
           return;
-        }
-      };
+        }};
 
       // Validation des adresses : géocoder celles qui n'ont pas de coordonnées
       const validatedAddresses = await Promise.all(
@@ -130,9 +166,9 @@ const Sidebar = ({
       const validAddresses = validatedAddresses.filter(a => a !== null);
       if (validAddresses.length > 0) {
         setFollowingAddresses([...followingAddresses, ...validAddresses]);
-        alert("Success, the file is imported");
+        setImportedFileName(file.name);
       } else {
-        alert("File format not supported. Please import a JSON or CSV file.");
+        setFileError("Please import a correct JSON or CSV file.");
       }
     };
 
@@ -167,6 +203,11 @@ const Sidebar = ({
     { value: 'byFoot', label: 'By Foot' }
   ];
 
+  const vehicleSelectStyle =
+    baseAddress && followingAddresses.length > 0 && vehicle === "chooseYourVehicle"
+      ? { border: '2px solid red', borderRadius: '10px', padding: '4px' }
+      : { border: '1px solid #ccc', borderRadius: '10px', padding: '4px' };
+
   return (
     <div className="sidebar">
 
@@ -180,6 +221,7 @@ const Sidebar = ({
           onChange={setVehicle}
           options={vehicleOptions}
           placeholder="Choose your vehicle"
+          style={vehicleSelectStyle}
         />
       </div>
 
@@ -188,6 +230,15 @@ const Sidebar = ({
           placeholder="Enter your base address"
           onSelect={handleBaseSelect}
         />
+        {/* Bouton "Use GPS Coordinates" ajouté ici */}
+        <div className="gpsCoordinates">
+          <button className="gpsCoordinatesButton"
+            onClick={handleUseGpsCoordinates}
+            style={gpsUsed ? { border: '2px solid green' } : {}}>
+            Use GPS Coordinates
+          </button>
+        </div>
+        <h2 className='yourbaseAddress'>Your base address :</h2>
         {baseAddress && (
           <div className='entryBaseAddress'>
             <span style={{ width: "90%", fontSize: "14px" }}>{baseAddress.address}</span>
@@ -214,6 +265,17 @@ const Sidebar = ({
               style={{ display: 'none' }}
             />
           </label>
+          {/* Affichage du nom du fichier en cas de succès ou d'un message d'erreur */}
+          {importedFileName && (
+            <span style={{ color: 'green', marginLeft: '10px', fontSize: '12px' }}>
+              {importedFileName}
+            </span>
+          )}
+          {fileError && (
+            <span style={{ color: 'red', marginLeft: '10px', fontSize: '12px' }}>
+              {fileError}
+            </span>
+          )}
         </div>
 
         <h2 className='yourFollowingAddress'>Your following address(es) :</h2>

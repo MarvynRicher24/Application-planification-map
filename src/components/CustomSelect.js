@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const CustomSelect = ({ value, onChange, options, placeholder }) => {
+const CustomSelect = ({ value, onChange, options, placeholder, style }) => {
   const [open, setOpen] = useState(false);
   const [activeOptionIndex, setActiveOptionIndex] = useState(-1);
-  const [isFocused, setIsFocused] = useState(false);
+
   const selectRef = useRef(null);
 
   // Fermer le dropdown lorsqu'on clique à l'extérieur
@@ -59,14 +59,9 @@ const CustomSelect = ({ value, onChange, options, placeholder }) => {
     <div className='chooseVehicle'
       ref={selectRef}
       tabIndex={0}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
       onKeyDown={handleKeyDown}
       onClick={() => setOpen(prev => !prev)}
-      style={{
-        border: isFocused ? '2px solid black' : '1px solid #ccc',
-
-      }}
+      style={style}
     >
       {selectedLabel}
       {open && (

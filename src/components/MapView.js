@@ -28,7 +28,7 @@ const MapView = ({ route }) => {
       {route && route.geometry && (
         <Polyline 
           positions={route.geometry.coordinates.map(coord => [coord[1], coord[0]])} 
-          color="blue" 
+          color="green" 
         />
       )}
       {route && <MapUpdater route={route} />}
