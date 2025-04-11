@@ -39,6 +39,13 @@ const Sidebar = ({
   const [fileError, setFileError] = useState('');
   const [importedFileName, setImportedFileName] = useState('');
 
+  // États pour les erreurs d'export
+  const [exportGoogleError, setExportGoogleError] = useState('');
+  const [downloadGpxError, setDownloadGpxError] = useState('');
+
+  // Vérifie si les entrées sont complètes (base address et au moins 1 following address)
+  const entriesComplete = baseAddress && followingAddresses.length > 0;
+
   // Fonction pour utiliser les coordonnées GPS de l'utilisateur et géocoder l'adresse via Nominatim
   const handleUseGpsCoordinates = () => {
     if (navigator.geolocation) {
@@ -54,7 +61,6 @@ const Sidebar = ({
               lon: longitude,
             });
             setGpsUsed(true);
-          } else {
           }
         } catch (error) {
           console.error("Reverse geocoding error :", error);
@@ -152,7 +158,8 @@ const Sidebar = ({
           console.error("CSV parsing error :", error);
           setFileError("File format not supported. Please import a JSON or CSV file.");
           return;
-        }};
+        }
+      };
 
       // Validation des adresses : géocoder celles qui n'ont pas de coordonnées
       const validatedAddresses = await Promise.all(
@@ -207,6 +214,90 @@ const Sidebar = ({
     baseAddress && followingAddresses.length > 0 && vehicle === "chooseYourVehicle"
       ? { border: '2px solid red', borderRadius: '10px', padding: '4px' }
       : { border: '1px solid #ccc', borderRadius: '10px', padding: '4px' };
+
+  // Construction de l'URL Google Maps pour l'itinéraire
+  const buildGoogleMapsUrl = () => {
+    const exportPoints = (baseAddress && followingAddresses.length > 0)
+      ? ((window.route && window.route.optimizedPoints)
+        ? window.route.optimizedPoints
+        : [baseAddress, ...followingAddresses])
+      : [];
+    if (exportPoints.length < 2) return '';
+    const origin = exportPoints[0];
+    const destination = exportPoints[exportPoints.length - 1];
+    const waypoints = exportPoints.slice(1, exportPoints.length - 1)
+      .map(pt => `${pt.lat},${pt.lon}`)
+      .join('|');
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lon}&destination=${destination.lat},${destination.lon}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ''}&travelmode=driving`;
+    return url;
+  };
+
+  // Fonction pour générer et télécharger un fichier GPX
+  const downloadGPX = () => {
+    const exportPoints = (baseAddress && followingAddresses.length > 0)
+      ? ((window.route && window.route.optimizedPoints) ? window.route.optimizedPoints : [baseAddress, ...followingAddresses])
+      : [];
+    if (exportPoints.length < 2) {
+      setDownloadGpxError("Please complete entries before downloading");
+      return;
+    }
+    // Réinitialise le message d'erreur s'il y a des points
+    setDownloadGpxError('');
+
+    let gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="FastPlaneco" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Exported Route</name>
+  </metadata>
+  <trk>
+    <name>FastPlaneco Route</name>
+    <trkseg>
+`;
+    exportPoints.forEach(pt => {
+      gpxContent += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">
+        <desc>${pt.address}</desc>
+      </trkpt>
+`;
+    });
+    gpxContent += `    </trkseg>
+  </trk>
+</gpx>`;
+
+    const blob = new Blob([gpxContent], { type: 'application/gpx+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'exported_route.gpx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Gestion de l'export vers Google Maps
+  const handleExportGoogle = () => {
+    if (!baseAddress || followingAddresses.length === 0) {
+      setExportGoogleError("Please complete entries before export");
+      return;
+    }
+    // Réinitialise le message d'erreur, puis ouvre le lien dans un nouvel onglet.
+    setExportGoogleError("");
+    const googleUrl = buildGoogleMapsUrl();
+    if (googleUrl !== "") {
+      window.open(googleUrl, "_blank", "noopener");
+    }
+  };
+
+  // Réinitialisation des messages dès que les entrées sont complètes
+  // Ces messages s'affichent dynamiquement en fonction des conditions
+  const exportGoogleMessage = entriesComplete
+    ? "you can now export your itinerary to Google Maps"
+    : "";
+  const downloadGpxMessage = entriesComplete
+    ? "you can now download a gpx file of your itinerary"
+    : "";
+
+  // Sauvegarde optionnelle pour utiliser route.optimizedPoints via window
+  window.route = window.route || null;
 
   return (
     <div className="sidebar">
@@ -295,6 +386,36 @@ const Sidebar = ({
           <p>Total Time: <strong>{formatTime(totalTime)}</strong> min</p>
           <p>Carbon Footprint: <strong>{formatCarbon(carbonFootprint)}</strong> g CO₂</p>
         </div>
+      </div>
+
+      {/* Boutons d'export séparés */}
+      <div className="dataExport">
+        <button className='exportButton' onClick={handleExportGoogle} >
+          Export to Google Maps
+        </button>
+        {!entriesComplete && exportGoogleError && (
+          <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', textAlign: 'center' }}>
+            {exportGoogleError}
+          </div>
+        )}
+        {entriesComplete && (
+          <div style={{ color: 'green', fontSize: '12px', marginTop: '4px', textAlign: 'center' }}>
+            {exportGoogleMessage}
+          </div>
+        )}
+        <button className='downloadButton' onClick={downloadGPX} >
+          Download a GPX file
+        </button>
+        {!entriesComplete && downloadGpxError && (
+          <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', textAlign: 'center' }}>
+            {downloadGpxError}
+          </div>
+        )}
+        {entriesComplete && (
+          <div style={{ color: 'green', fontSize: '12px', marginTop: '4px', textAlign: 'center' }}>
+            {downloadGpxMessage}
+          </div>
+        )}
       </div>
 
     </div>
