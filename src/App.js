@@ -15,12 +15,12 @@ function App() {
   // Vehicle data: speed (km/h) used to recalculate duration and emission factor in g CO2/km.
   const vehicleData = useMemo(() => ({
     chooseYourVehicle: { speed: 0, emission: 0 },
-    bike: { speed: 15, emission: 6 },
     car: { speed: 60, emission: 218 },
     electricCar: { speed: 60, emission: 103 },
     utility: { speed: 60, emission: 218 },
     electricUtility: { speed: 60, emission: 103 },
-    byFoot: { speed: 5, emission: 0 }
+    byFoot: { speed: 5, emission: 0 },
+    bike: { speed: 15, emission: 6 }
   }), []);
 
   useEffect(() => {
@@ -104,136 +104,123 @@ function App() {
       // Build complete optimized itinerary: base address + addresses in optimized order
       const optimizedPoints = [baseAddress, ...optimizedFollowing];
 
-      // GraphHopper calculates the best route for a bicycle
-      if (vehicle === 'bike') {
-        let ghUrl = `https://graphhopper.com/api/1/route?vehicle=bike&locale=fr&points_encoded=false&elevation=false&weighting=fastest&key=b3864d95-c9b8-4d53-b078-d3a77e2e6e13`;
-        optimizedPoints.forEach(pt => {
-          ghUrl += `&point=${pt.lat},${pt.lon}`;
-        });
+      // bike and byfoot config
+      if (vehicle === 'bike' || vehicle === 'byFoot') {
+        const profile = vehicle === 'bike' ? "cycling-regular" : "foot-walking";
+        const orsUrl = `https://api.openrouteservice.org/v2/directions/${profile}/geojson`;
+        const payload = {
+          coordinates: optimizedPoints.map(pt => [pt.lon, pt.lat])
+        };
+
         try {
-          const ghResponse = await fetch(ghUrl);
-          const ghData = await ghResponse.json();
-          if (ghData.paths && ghData.paths.length > 0) {
-            const ghRoute = ghData.paths[0];
-            // Update distance (in km) and time (in minutes)
-            setTotalDistance((ghRoute.distance / 1000).toFixed(2));
-            setTotalTime(Math.floor(ghRoute.time / 60000));
-            const bikeFootprint = (ghRoute.distance / 1000) * vehicleData[vehicle].emission;
-            setCarbonFootprint(bikeFootprint.toFixed(2));
-            // The returned geometry (in this case ghRoute.points) is used directly to display the route.
-            // The structure of ghRoute.points depends on the parameter points_encoded=false, which returns a GeoJSON
-            setRoute({
-              geometry: ghRoute.points,
-              optimizedPoints,
-            });
-          } else {
-            console.error("Error retrieving bike route via GraphHopper");
-          }
-        } catch (error) {
-          console.error("Error when calling GraphHopper :", error);
-        }
-        
-      } else if (vehicle === 'byFoot') {
-        // Using GraphHopper with the “foot” profile for pedestrian mode
-        let ghUrl = `https://graphhopper.com/api/1/route?vehicle=foot&locale=fr&points_encoded=false&elevation=false&weighting=fastest&key=3ec658db-0296-4257-9b4c-fa78c36e55a2`;
-        optimizedPoints.forEach(pt => {
-          ghUrl += `&point=${pt.lat},${pt.lon}`;
-        });
-        try {
-          const ghResponse = await fetch(ghUrl);
-          const ghData = await ghResponse.json();
-          if (ghData.paths && ghData.paths.length > 0) {
-            const ghRoute = ghData.paths[0];
-            setTotalDistance((ghRoute.distance / 1000).toFixed(2));
-            setTotalTime(Math.floor(ghRoute.time / 60000));
-            const footFootprint = (ghRoute.distance / 1000) * vehicleData[vehicle].emission;
-            setCarbonFootprint(footFootprint.toFixed(2));
-            setRoute({
-              geometry: ghRoute.points,
-              optimizedPoints,
-            });
-          } else {
-            console.error("Error retrieving pedestrian path via GraphHopper");
-          }
-        } catch (error) {
-          console.error("Error calling GraphHopper (byFoot) :", error);
-        }
-      } else {
-
-        // --- Retrieve the complete route from the OSRM route service API ---
-        const routeCoordsStr = optimizedPoints.map(pt => `${pt.lon},${pt.lat}`).join(';');
-        // The request is always made in “driving” mode, as OSRM public only supports this profile,
-        // but the time displayed will be recalculated according to the speed of the selected vehicle.
-        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeCoordsStr}?overview=full&geometries=geojson`;
-        const routeResponse = await fetch(routeUrl);
-        const routeData = await routeResponse.json();
-        if (!routeData || routeData.code !== "Ok") {
-          alert("Error fetching route.");
-          return;
-        }
-        const routeInfo = routeData.routes[0];
-        // routeInfo.distance in meters, routeInfo.duration in seconds, geometry in GeoJSON format
-
-        setTotalDistance((routeInfo.distance / 1000).toFixed(2));
-        const footprint = (routeInfo.distance / 1000) * vehicleData[vehicle].emission;
-        setCarbonFootprint(footprint.toFixed(2));
-
-        // --- New “Total Time” calculation via OpenRouteService ---
-        try {
-          // Selecting the ORS profile for your vehicle
-          const profileMapping = {
-            car: "driving-car",
-            electricCar: "driving-car",
-            utility: "driving-car",
-            electricUtility: "driving-car",
-            bike: "cycling-regular",
-            byFoot: "foot-walking"
-          };
-          const profile = profileMapping[vehicle] || "driving-car";
-
-          const orsUrl = `https://api.openrouteservice.org/v2/directions/${profile}/geojson`;
-          const orsBody = JSON.stringify({
-            coordinates: optimizedPoints.map(pt => [pt.lon, pt.lat])
-          });
-
           const orsResponse = await fetch(orsUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': '5b3ce3597851110001cf62482990c084e35f41e1b1cdafe113a39b59'
             },
-            body: orsBody
+            body: JSON.stringify(payload)
           });
-
+          if (!orsResponse.ok) {
+            const errorDetails = await orsResponse.text();
+            throw new Error(`ORS API error: ${orsResponse.status} - ${errorDetails}`);
+          }
           const orsData = await orsResponse.json();
-
-          if (
-            orsData &&
-            orsData.features &&
-            orsData.features.length > 0 &&
-            orsData.features[0].properties &&
-            orsData.features[0].properties.segments &&
-            orsData.features[0].properties.segments.length > 0
-          ) {
-            // We sum the duration of all segments
-            const totalDurationSec = orsData.features[0].properties.segments.reduce(
-              (sum, segment) => sum + segment.duration, 0
-            );
-            setTotalTime(Math.floor(totalDurationSec / 60));
+          if (orsData.features && orsData.features.length > 0) {
+            const feature = orsData.features[0];
+            // distance and time update
+            setTotalDistance((feature.properties.summary.distance / 1000).toFixed(2));
+            setTotalTime(Math.floor(feature.properties.summary.duration / 60));
+            const footprint = (feature.properties.summary.distance / 1000) * vehicleData[vehicle].emission;
+            setCarbonFootprint(footprint.toFixed(2));
+            // Retrieve geometry (GeoJSON) directly
+            setRoute({
+              geometry: feature.geometry,
+              optimizedPoints
+            });
           } else {
-            // Fallback : use the initial calculation
-            setTotalTime(Math.floor((routeInfo.distance / 1000) / vehicleData[vehicle].speed * 60));
+            console.error("ORS did not return any route features");
           }
         } catch (error) {
-          console.error("Error when retrieving time via ORS :", error);
+          console.error("Error calling ORS for bike/byFoot:", error);
+          alert("Error retrieving the route for bike/byFoot mode via ORS.");
+        }
+        return;
+      }
+
+      // --- Retrieve the complete route from the OSRM route service API ---
+      const routeCoordsStr = optimizedPoints.map(pt => `${pt.lon},${pt.lat}`).join(';');
+      // The request is always made in “driving” mode, as OSRM public only supports this profile,
+      // but the time displayed will be recalculated according to the speed of the selected vehicle.
+      const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeCoordsStr}?overview=full&geometries=geojson`;
+      const routeResponse = await fetch(routeUrl);
+      const routeData = await routeResponse.json();
+      if (!routeData || routeData.code !== "Ok") {
+        alert("Error fetching route.");
+        return;
+      }
+      const routeInfo = routeData.routes[0];
+      // routeInfo.distance in meters, routeInfo.duration in seconds, geometry in GeoJSON format
+
+      setTotalDistance((routeInfo.distance / 1000).toFixed(2));
+      const footprint = (routeInfo.distance / 1000) * vehicleData[vehicle].emission;
+      setCarbonFootprint(footprint.toFixed(2));
+
+      // --- New “Total Time” calculation via OpenRouteService ---
+      try {
+        // Selecting the ORS profile for your vehicle
+        const profileMapping = {
+          car: "driving-car",
+          electricCar: "driving-car",
+          utility: "driving-car",
+          electricUtility: "driving-car",
+          bike: "cycling-regular",
+          byFoot: "foot-walking"
+        };
+
+        const profile = profileMapping[vehicle] || "driving-car";
+        const orsUrl = `https://api.openrouteservice.org/v2/directions/${profile}/geojson`;
+        const orsBody = JSON.stringify({
+          coordinates: optimizedPoints.map(pt => [pt.lon, pt.lat])
+        });
+
+        const orsResponse = await fetch(orsUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': '5b3ce3597851110001cf62482990c084e35f41e1b1cdafe113a39b59'
+          },
+          body: orsBody
+        });
+
+        const orsData = await orsResponse.json();
+
+        if (
+          orsData &&
+          orsData.features &&
+          orsData.features.length > 0 &&
+          orsData.features[0].properties &&
+          orsData.features[0].properties.segments &&
+          orsData.features[0].properties.segments.length > 0
+        ) {
+          // We sum the duration of all segments
+          const totalDurationSec = orsData.features[0].properties.segments.reduce(
+            (sum, segment) => sum + segment.duration, 0
+          );
+          setTotalTime(Math.floor(totalDurationSec / 60));
+        } else {
+          // Fallback : use the initial calculation
           setTotalTime(Math.floor((routeInfo.distance / 1000) / vehicleData[vehicle].speed * 60));
         }
-        setRoute({
-          geometry: routeInfo.geometry,
-          optimizedPoints,
-        });
+      } catch (error) {
+        console.error("Error when retrieving time via ORS :", error);
+        setTotalTime(Math.floor((routeInfo.distance / 1000) / vehicleData[vehicle].speed * 60));
       }
-    };
+      setRoute({
+        geometry: routeInfo.geometry,
+        optimizedPoints,
+      });
+    }
 
     fetchRouteData();
   }, [baseAddress, followingAddresses, vehicle, vehicleData]);
