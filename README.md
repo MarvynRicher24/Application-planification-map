@@ -4,6 +4,8 @@ The aim is to create a route planning tool (similar to Google Maps), but with a 
 - automatic import of following adresses,
 - automatic calculation of distance and travel time according to the type of vehicle chosen,
 - calculation of the ecological impact of the route according to the type of vehicle chosen.
+- export to Google Maps button
+- GPX file downloader button
 
 # Getting Started with Create React App
 
