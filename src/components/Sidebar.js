@@ -35,18 +35,18 @@ const Sidebar = ({
 
   const [gpsUsed, setGpsUsed] = useState(false);
 
-  // Nouveaux états pour le message d'erreur et le succès lors de l'import de fichier
+  // New statuses for error message and success during file import
   const [fileError, setFileError] = useState('');
   const [importedFileName, setImportedFileName] = useState('');
 
-  // États pour les erreurs d'export
+  // Reports for export errors
   const [exportGoogleError, setExportGoogleError] = useState('');
   const [downloadGpxError, setDownloadGpxError] = useState('');
 
-  // Vérifie si les entrées sont complètes (base address et au moins 1 following address)
+  // Checks if entries are complete (base address and at least 1 following address)
   const entriesComplete = baseAddress && followingAddresses.length > 0;
 
-  // Fonction pour utiliser les coordonnées GPS de l'utilisateur et géocoder l'adresse via Nominatim
+  // Function to use the user's GPS coordinates and geocode the address via Nominatim
   const handleUseGpsCoordinates = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (position) => {
@@ -71,7 +71,7 @@ const Sidebar = ({
     };
   };
 
-  // Fonction pour géocoder une adresse via l'API Nominatim
+  // Function to geocode an address via the Nominatim API
   const geocodeAddress = async (query) => {
     try {
       const response = await fetch(
@@ -94,9 +94,9 @@ const Sidebar = ({
     }
   };
 
-  // Fonction de traitement de l'import de fichier
+  // File import processing function
   const handleFileImport = (e) => {
-    // Réinitialiser les messages de retour
+    // Reset return messages
     setFileError('');
     setImportedFileName('');
 
@@ -107,12 +107,12 @@ const Sidebar = ({
     reader.onload = async (event) => {
       const text = event.target.result;
       let importedAddresses = [];
-      // Détection de l'extension du fichier
+      // File extension detection
       if (file.name.toLowerCase().endsWith('.json')) {
         try {
           const data = JSON.parse(text);
-          // On suppose que le fichier JSON contient un tableau d'objets
-          // avec des clés pouvant être "address" ou des coordonnées "lat" et "lon"
+          // The JSON file is assumed to contain an array of
+          // with keys that can be “address” or ‘lat’ and “lon” coordinates
           importedAddresses = data.map(item => {
             if (item.lat && item.lon) {
               return {
@@ -121,7 +121,7 @@ const Sidebar = ({
                 lon: parseFloat(item.lon),
               };
             }
-            // Sinon, on peut effectuer une concaténation d'éventuels champs d'adresse
+            // Alternatively, we can concatenate any address fields
             return {
               address: item.address || `${item.street || ''} ${item.city || ''} ${item.postalCode || ''} ${item.country || ''}`.trim(),
               lat: item.lat ? parseFloat(item.lat) : null,
@@ -134,7 +134,7 @@ const Sidebar = ({
           return;
         }
       } else if (file.name.toLowerCase().endsWith('.csv')) {
-        // Simple parser CSV : on suppose une première ligne d'entêtes
+        // Simple CSV parser: we assume a first line of headers
         try {
           const lines = text.split(/\r?\n/);
           if (lines.length < 2) throw new Error("Empty or badly formatted CSV");
@@ -146,7 +146,7 @@ const Sidebar = ({
             headers.forEach((header, index) => {
               item[header] = values[index] ? values[index].trim() : "";
             });
-            // Construction de l'objet adresse
+            // Address object construction
             acc.push({
               address: item.address || `${item.street || ''} ${item.city || ''} ${item.postalCode || ''} ${item.country || ''}`.trim(),
               lat: item.lat ? parseFloat(item.lat) : null,
@@ -161,15 +161,15 @@ const Sidebar = ({
         }
       };
 
-      // Validation des adresses : géocoder celles qui n'ont pas de coordonnées
+      // Address validation: geocode addresses without coordinates
       const validatedAddresses = await Promise.all(
         importedAddresses.map(async (addr) => {
           if (addr.lat && addr.lon) return addr;
-          // Utiliser la chaîne d'adresse pour géocoder
+          // Use address string to geocode
           return await geocodeAddress(addr.address);
         })
       );
-      // Filtrer les adresses non validées (null)
+      // Filter out invalid addresses (null)
       const validAddresses = validatedAddresses.filter(a => a !== null);
       if (validAddresses.length > 0) {
         setFollowingAddresses([...followingAddresses, ...validAddresses]);
@@ -182,7 +182,7 @@ const Sidebar = ({
     reader.readAsText(file);
   };
 
-  // Formatage du temps (en minutes) en h et min
+  // Formatting time (in minutes) in h and min
   const formatTime = (time) => {
     const minutes = parseInt(time, 10);
     if (minutes < 60) return `${minutes}`;
@@ -191,7 +191,7 @@ const Sidebar = ({
     return `${hours} h ${min}`;
   };
 
-  // Formatage de l'empreinte carbone (en grammes) en kg et g
+  // Carbon footprint formatting (in grams) in kg and g
   const formatCarbon = (carbon) => {
     const grams = parseFloat(carbon);
     if (grams < 1000) return `${grams}`;
@@ -200,7 +200,7 @@ const Sidebar = ({
     return `${kg} kg ${remainder}`;
   };
 
-  // Options pour le CustomSelect
+  // CustomSelect options
   const vehicleOptions = [
     { value: 'car', label: 'Car' },
     { value: 'electricCar', label: 'Electric Car' },
@@ -215,7 +215,7 @@ const Sidebar = ({
       ? { border: '2px solid red', borderRadius: '10px', padding: '4px' }
       : { border: '1px solid #ccc', borderRadius: '10px', padding: '4px' };
 
-  // Construction de l'URL Google Maps pour l'itinéraire
+  // Building the Google Maps URL for the route
   const buildGoogleMapsUrl = () => {
     const exportPoints = (baseAddress && followingAddresses.length > 0)
       ? ((window.route && window.route.optimizedPoints)
@@ -232,7 +232,7 @@ const Sidebar = ({
     return url;
   };
 
-  // Fonction pour générer et télécharger un fichier GPX
+  // Function to generate and download a GPX file
   const downloadGPX = () => {
     const exportPoints = (baseAddress && followingAddresses.length > 0)
       ? ((window.route && window.route.optimizedPoints) ? window.route.optimizedPoints : [baseAddress, ...followingAddresses])
@@ -241,7 +241,7 @@ const Sidebar = ({
       setDownloadGpxError("Please complete entries before downloading");
       return;
     }
-    // Réinitialise le message d'erreur s'il y a des points
+    // Resets error message if there are dots
     setDownloadGpxError('');
 
     let gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -273,13 +273,13 @@ const Sidebar = ({
     document.body.removeChild(link);
   };
 
-  // Gestion de l'export vers Google Maps
+  // Manage export to Google Maps
   const handleExportGoogle = () => {
     if (!baseAddress || followingAddresses.length === 0) {
       setExportGoogleError("Please complete entries before export");
       return;
     }
-    // Réinitialise le message d'erreur, puis ouvre le lien dans un nouvel onglet.
+    // Resets the error message, then opens the link in a new tab.
     setExportGoogleError("");
     const googleUrl = buildGoogleMapsUrl();
     if (googleUrl !== "") {
@@ -287,8 +287,8 @@ const Sidebar = ({
     }
   };
 
-  // Réinitialisation des messages dès que les entrées sont complètes
-  // Ces messages s'affichent dynamiquement en fonction des conditions
+  // Reset messages as soon as entries are complete
+  // These messages are displayed dynamically, depending on conditions
   const exportGoogleMessage = entriesComplete
     ? "you can now export your itinerary to Google Maps"
     : "";
@@ -296,7 +296,7 @@ const Sidebar = ({
     ? "you can now download a gpx file of your itinerary"
     : "";
 
-  // Sauvegarde optionnelle pour utiliser route.optimizedPoints via window
+  // Optional backup to use route.optimizedPoints via window
   window.route = window.route || null;
 
   return (
@@ -321,7 +321,7 @@ const Sidebar = ({
           placeholder="Enter your base address"
           onSelect={handleBaseSelect}
         />
-        {/* Bouton "Use GPS Coordinates" ajouté ici */}
+        {/* Use GPS Coordinates" button added here */}
         <div className="gpsCoordinates">
           <button className="gpsCoordinatesButton"
             onClick={handleUseGpsCoordinates}
@@ -344,7 +344,7 @@ const Sidebar = ({
           onSelect={handleFollowingSelect}
         />
 
-        {/* Ajout de l'input d'import de fichier */}
+        {/* File import input added */}
         <div className='fileImport'>
           <label htmlFor="fileImport" className="fileImportButton">
             Import file
@@ -356,7 +356,7 @@ const Sidebar = ({
               style={{ display: 'none' }}
             />
           </label>
-          {/* Affichage du nom du fichier en cas de succès ou d'un message d'erreur */}
+          {/* Display file name on success or error message */}
           {importedFileName && (
             <span style={{ color: 'green', marginLeft: '10px', fontSize: '12px' }}>
               {importedFileName}
@@ -388,7 +388,7 @@ const Sidebar = ({
         </div>
       </div>
 
-      {/* Boutons d'export séparés */}
+      {/* Display file name on success or error message */}
       <div className="dataExport">
         <button className='exportButton' onClick={handleExportGoogle} >
           Export to Google Maps

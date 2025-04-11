@@ -6,13 +6,13 @@ function App() {
   const [baseAddress, setBaseAddress] = useState(null);
   const [followingAddresses, setFollowingAddresses] = useState([]);
   const [vehicle, setVehicle] = useState('chooseYourVehicle');
-  // 'route' contiendra la géométrie renvoyée par OSRM et la liste optimisée des points.
+  // 'route' will contain the geometry returned by OSRM and the optimized list of points.
   const [route, setRoute] = useState(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [carbonFootprint, setCarbonFootprint] = useState(0);
 
-  // Données véhicule : la vitesse (km/h) utilisée pour recalculer la durée et le facteur d'émission en g CO2/km.
+  // Vehicle data: speed (km/h) used to recalculate duration and emission factor in g CO2/km.
   const vehicleData = useMemo(() => ({
     chooseYourVehicle: { speed: 0, emission: 0 },
     bike: { speed: 15, emission: 6 },
@@ -33,17 +33,17 @@ function App() {
         return;
       }
 
-      // Vérification : si au moins une following address est renseignée et que le véhicule n'est pas choisi
+      // Check : if at least one following address is entered and the vehicle is not selected
       if (followingAddresses.length > 0 && vehicle === "chooseYourVehicle") {
         setTotalTime(0);
         setCarbonFootprint(0);
         return;
       }
 
-      // Combiner la base address et les adresses suivantes
+      // Combine the address base and the following addresses
       const points = [baseAddress, ...followingAddresses];
       if (points.length === 1) {
-        // Si seule la base address est renseignée, afficher son marker seul
+        // If only the address base is filled in, display its marker only
         setRoute({ optimizedPoints: [baseAddress], geometry: null });
         setTotalDistance(0);
         setTotalTime(0);
@@ -51,7 +51,7 @@ function App() {
         return;
       }
 
-      // --- Optimisation TSP à l'aide de l'API OSRM table service ---
+      // --- TSP optimization using the OSRM table service API ---
       const coordsStr = points.map(pt => `${pt.lon},${pt.lat}`).join(';');
       const tableUrl = `https://router.project-osrm.org/table/v1/driving/${coordsStr}?annotations=distance,duration`;
       const tableResponse = await fetch(tableUrl);
@@ -60,9 +60,9 @@ function App() {
         console.error("Error fetching routing table.");
         return;
       }
-      const distanceMatrix = tableData.distances; // distances en mètres
+      const distanceMatrix = tableData.distances; // distances in meters
 
-      // Pour le TSP, la base (index 0) est fixe et on permute les adresses suivantes (indices 1..n)
+      // For the TSP, the base (index 0) is fixed and the following addresses (indices 1..n) are permuted
       let bestOrder = null;
       let bestDistance = Infinity;
       const followingIndices = followingAddresses.map((_, i) => i + 1);
@@ -84,7 +84,7 @@ function App() {
       const allPermutations = permutations(followingIndices);
       allPermutations.forEach(order => {
         let dist = 0;
-        let currentIndex = 0; // départ de la base address (index 0)
+        let currentIndex = 0; // start of address base (index 0)
         order.forEach(idx => {
           dist += distanceMatrix[currentIndex][idx];
           currentIndex = idx;
@@ -95,16 +95,16 @@ function App() {
         }
       });
 
-      // Réordonner les adresses suivantes d'après le meilleur ordre
+      // Arrange the following addresses in the best possible order
       const optimizedFollowing = bestOrder ? bestOrder.map(idx => points[idx]) : [];
-      // Mise à jour de l'ordre dans l'état si nécessaire
+      // Update order in report if necessary
       if (JSON.stringify(optimizedFollowing) !== JSON.stringify(followingAddresses)) {
         setFollowingAddresses(optimizedFollowing);
       }
-      // Construire l'itinéraire complet optimisé : base address + adresses dans l'ordre optimisé
+      // Build complete optimized itinerary: base address + addresses in optimized order
       const optimizedPoints = [baseAddress, ...optimizedFollowing];
 
-      // Calcul du meilleur itinéraire pour un vélo grâce à GraphHopper
+      // GraphHopper calculates the best route for a bicycle
       if (vehicle === 'bike') {
         let ghUrl = `https://graphhopper.com/api/1/route?vehicle=bike&locale=fr&points_encoded=false&elevation=false&weighting=fastest&key=b3864d95-c9b8-4d53-b078-d3a77e2e6e13`;
         optimizedPoints.forEach(pt => {
@@ -115,13 +115,13 @@ function App() {
           const ghData = await ghResponse.json();
           if (ghData.paths && ghData.paths.length > 0) {
             const ghRoute = ghData.paths[0];
-            // Mise à jour de la distance (en km) et du temps (en minutes)
+            // Update distance (in km) and time (in minutes)
             setTotalDistance((ghRoute.distance / 1000).toFixed(2));
             setTotalTime(Math.floor(ghRoute.time / 60000));
-            // Pour le vélo, l'empreinte carbone est mise à zéro (ou pourrait être un très faible coefficient)
+            // For bicycles, the carbon footprint is set at zero (or could be a very low coefficient).
             setCarbonFootprint(6 * (ghRoute.distance / 1000).toFixed(2));
-            // Pour l'affichage du tracé, la géométrie retournée (ici ghRoute.points) est directement utilisée
-            // La structure de ghRoute.points dépend du paramètre points_encoded=false qui renvoie un GeoJSON
+            // The returned geometry (in this case ghRoute.points) is used directly to display the route.
+            // The structure of ghRoute.points depends on the parameter points_encoded=false, which returns a GeoJSON
             setRoute({
               geometry: ghRoute.points,
               optimizedPoints,
@@ -133,7 +133,7 @@ function App() {
           console.error("Error when calling GraphHopper :", error);
         }
       } else if (vehicle === 'byFoot') {
-        // Utilisation de GraphHopper avec le profil "foot" pour le mode piéton
+        // Using GraphHopper with the “foot” profile for pedestrian mode
         let ghUrl = `https://graphhopper.com/api/1/route?vehicle=foot&locale=fr&points_encoded=false&elevation=false&weighting=fastest&key=3ec658db-0296-4257-9b4c-fa78c36e55a2`;
         optimizedPoints.forEach(pt => {
           ghUrl += `&point=${pt.lat},${pt.lon}`;
@@ -145,7 +145,7 @@ function App() {
             const ghRoute = ghData.paths[0];
             setTotalDistance((ghRoute.distance / 1000).toFixed(2));
             setTotalTime(Math.floor(ghRoute.time / 60000));
-            // Pour la marche, l'empreinte carbone est nulle (ou pratiquement nulle)
+            // For walking, the carbon footprint is zero (or practically zero).
             setCarbonFootprint(0);
             setRoute({
               geometry: ghRoute.points,
@@ -159,10 +159,10 @@ function App() {
         }
       } else {
 
-        // --- Récupérer l'itinéraire complet depuis l'API OSRM route service ---
+        // --- Retrieve the complete route from the OSRM route service API ---
         const routeCoordsStr = optimizedPoints.map(pt => `${pt.lon},${pt.lat}`).join(';');
-        // La requête est toujours faite en mode "driving" car OSRM public ne supporte que ce profil,
-        // mais la durée affichée sera recalculée en fonction de la vitesse du véhicule sélectionné.
+        // The request is always made in “driving” mode, as OSRM public only supports this profile,
+        // but the time displayed will be recalculated according to the speed of the selected vehicle.
         const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeCoordsStr}?overview=full&geometries=geojson`;
         const routeResponse = await fetch(routeUrl);
         const routeData = await routeResponse.json();
@@ -171,15 +171,15 @@ function App() {
           return;
         }
         const routeInfo = routeData.routes[0];
-        // routeInfo.distance en mètres, routeInfo.duration en secondes, geometry au format GeoJSON
+        // routeInfo.distance in meters, routeInfo.duration in seconds, geometry in GeoJSON format
 
         setTotalDistance((routeInfo.distance / 1000).toFixed(2));
         const footprint = (routeInfo.distance / 1000) * vehicleData[vehicle].emission;
         setCarbonFootprint(footprint.toFixed(2));
 
-        // --- Nouveau calcul du "Total Time" via OpenRouteService ---
+        // --- New “Total Time” calculation via OpenRouteService ---
         try {
-          // Sélection du profil ORS en fonction du véhicule choisi
+          // Selecting the ORS profile for your vehicle
           const profileMapping = {
             car: "driving-car",
             electricCar: "driving-car",
@@ -214,13 +214,13 @@ function App() {
             orsData.features[0].properties.segments &&
             orsData.features[0].properties.segments.length > 0
           ) {
-            // On somme la durée de tous les segments
+            // We sum the duration of all segments
             const totalDurationSec = orsData.features[0].properties.segments.reduce(
               (sum, segment) => sum + segment.duration, 0
             );
             setTotalTime(Math.floor(totalDurationSec / 60));
           } else {
-            // Fallback : utiliser le calcul initial
+            // Fallback : use the initial calculation
             setTotalTime(Math.floor((routeInfo.distance / 1000) / vehicleData[vehicle].speed * 60));
           }
         } catch (error) {

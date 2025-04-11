@@ -6,7 +6,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, style }) => {
 
   const selectRef = useRef(null);
 
-  // Fermer le dropdown lorsqu'on clique à l'extérieur
+  // Close dropdown when clicked outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (selectRef.current && !selectRef.current.contains(e.target)) {
@@ -18,15 +18,15 @@ const CustomSelect = ({ value, onChange, options, placeholder, style }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Obtenir l'étiquette de l'option sélectionnée ou le placeholder
+  // Get the selected option label or placeholder
   const selectedLabel = options.find(opt => opt.value === value)?.label || placeholder;
 
   const handleKeyDown = (e) => {
     if (!open) {
-      // Ouvrir le dropdown dès qu'une touche fléchée est pressée
+      // Open dropdown as soon as an arrow key is pressed
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         setOpen(true);
-        // Initialiser l'index actif sur 0
+        // Set active index to 0
         setActiveOptionIndex(0);
         e.preventDefault();
         return;
@@ -45,7 +45,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, style }) => {
           onChange(options[activeOptionIndex].value);
           setOpen(false);
           setActiveOptionIndex(-1);
-          // Retirer le focus pour enlever le contour
+          // Remove focus to remove contour
           selectRef.current.blur();
         }
       } else if (e.key === "Escape") {
@@ -84,7 +84,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, style }) => {
                 onChange(option.value);
                 setOpen(false);
                 setActiveOptionIndex(-1);
-                // Retirer le focus pour enlever le contour après clic
+                // Remove focus to remove contour after click
                 selectRef.current.blur();
               }}
               style={{

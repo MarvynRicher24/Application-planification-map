@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 
 const MapView = ({ route }) => {
-  // Composant pour ajuster la vue de la carte en fonction du parcours
+  // Component for adjusting the map view to suit the route
   const MapUpdater = ({ route }) => {
     const map = useMap();
     useEffect(() => {

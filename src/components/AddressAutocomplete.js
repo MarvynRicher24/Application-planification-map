@@ -7,7 +7,7 @@ const AddressAutocomplete = ({ placeholder, onSelect }) => {
     const apiKey = 'a920f1061aa14d3a9db4657483e68d9c';
     const containerRef = useRef(null);
     const controllerRef = useRef(null);
-    const inputRef = useRef(null); // Référence pour l'input
+    const inputRef = useRef(null); // Input reference
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -21,14 +21,14 @@ const AddressAutocomplete = ({ placeholder, onSelect }) => {
     }, []);
 
     useEffect(() => {
-        // Si l'entrée est trop courte, on vide les suggestions et on réinitialise l'index actif
+        // If the entry is too short, empty the suggestions and reset the active index.
         if (inputValue.length < 3) {
             setSuggestions([]);
             setActiveSuggestionIndex(-1);
             return;
         }
 
-        // Annule la requête précédente si elle existe
+        // Cancels the previous query if it exists
         if (controllerRef.current) {
             controllerRef.current.abort();
         }
@@ -51,7 +51,7 @@ const AddressAutocomplete = ({ placeholder, onSelect }) => {
                     console.error("Erreur lors de la récupération des suggestions :", error);
                 }
             }
-        }, 300); // debounce de 300ms
+        }, 300); // 300ms debounce
 
         return () => {
             clearTimeout(timeoutId);
@@ -66,11 +66,11 @@ const AddressAutocomplete = ({ placeholder, onSelect }) => {
             lat: geometry.coordinates[1],
             lon: geometry.coordinates[0],
         });
-        // Nettoyer l'input et réinitialiser les suggestions
+        // Clean input and reset suggestions
         setInputValue('');
         setSuggestions([]);
         setActiveSuggestionIndex(-1);
-        // Retirer le focus de l'input après sélection
+        // Remove focus from input after selection
         if (inputRef.current) {
             inputRef.current.blur();
         }
