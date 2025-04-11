@@ -223,12 +223,26 @@ const Sidebar = ({
         : [baseAddress, ...followingAddresses])
       : [];
     if (exportPoints.length < 2) return '';
+
     const origin = exportPoints[0];
     const destination = exportPoints[exportPoints.length - 1];
     const waypoints = exportPoints.slice(1, exportPoints.length - 1)
       .map(pt => `${pt.lat},${pt.lon}`)
       .join('|');
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lon}&destination=${destination.lat},${destination.lon}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ''}&travelmode=driving`;
+
+    // Mapping to define the mode of travel on Google Maps
+    const travelModeMapping = {
+      car: "driving",
+      electricCar: "driving",
+      utility: "driving",
+      electricUtility: "driving",
+      bike: "bicycling",
+      byFoot: "walking",
+    };
+
+    const travelMode = travelModeMapping[vehicle] || "driving";
+
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lon}&destination=${destination.lat},${destination.lon}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ''}&travelmode=${travelMode}`;
     return url;
   };
 
@@ -244,10 +258,22 @@ const Sidebar = ({
     // Resets error message if there are dots
     setDownloadGpxError('');
 
+    // Mapping for vehicle type in GPX file
+    const vehicleMapping = {
+      car: "Driving",
+      electricCar: "Driving",
+      utility: "Driving",
+      electricUtility: "Driving",
+      bike: "Cycling",
+      byFoot: "Walking",
+    };
+    const vehicleDescription = vehicleMapping[vehicle] || "Driving";
+
     let gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="FastPlaneco" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>Exported Route</name>
+    <desc>Vehicle: ${vehicleDescription}</desc>
   </metadata>
   <trk>
     <name>FastPlaneco Route</name>

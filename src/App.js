@@ -118,8 +118,8 @@ function App() {
             // Update distance (in km) and time (in minutes)
             setTotalDistance((ghRoute.distance / 1000).toFixed(2));
             setTotalTime(Math.floor(ghRoute.time / 60000));
-            // For bicycles, the carbon footprint is set at zero (or could be a very low coefficient).
-            setCarbonFootprint(6 * (ghRoute.distance / 1000).toFixed(2));
+            const bikeFootprint = (ghRoute.distance / 1000) * vehicleData[vehicle].emission;
+            setCarbonFootprint(bikeFootprint.toFixed(2));
             // The returned geometry (in this case ghRoute.points) is used directly to display the route.
             // The structure of ghRoute.points depends on the parameter points_encoded=false, which returns a GeoJSON
             setRoute({
@@ -132,6 +132,7 @@ function App() {
         } catch (error) {
           console.error("Error when calling GraphHopper :", error);
         }
+        
       } else if (vehicle === 'byFoot') {
         // Using GraphHopper with the “foot” profile for pedestrian mode
         let ghUrl = `https://graphhopper.com/api/1/route?vehicle=foot&locale=fr&points_encoded=false&elevation=false&weighting=fastest&key=3ec658db-0296-4257-9b4c-fa78c36e55a2`;
@@ -145,17 +146,17 @@ function App() {
             const ghRoute = ghData.paths[0];
             setTotalDistance((ghRoute.distance / 1000).toFixed(2));
             setTotalTime(Math.floor(ghRoute.time / 60000));
-            // For walking, the carbon footprint is zero (or practically zero).
-            setCarbonFootprint(0);
+            const footFootprint = (ghRoute.distance / 1000) * vehicleData[vehicle].emission;
+            setCarbonFootprint(footFootprint.toFixed(2));
             setRoute({
               geometry: ghRoute.points,
               optimizedPoints,
             });
           } else {
-            console.error("Erreur lors de la récupération du trajet piéton via GraphHopper");
+            console.error("Error retrieving pedestrian path via GraphHopper");
           }
         } catch (error) {
-          console.error("Erreur lors de l'appel à GraphHopper (byFoot) :", error);
+          console.error("Error calling GraphHopper (byFoot) :", error);
         }
       } else {
 
