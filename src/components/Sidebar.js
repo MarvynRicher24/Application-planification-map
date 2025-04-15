@@ -46,6 +46,9 @@ const Sidebar = ({
   // Checks if entries are complete (base address and at least 1 following address)
   const entriesComplete = baseAddress && followingAddresses.length > 0;
 
+  // Vérifie si un véhicule est sélectionné (différent de "chooseYourVehicle")
+  const vehicleSelected = vehicle !== "chooseYourVehicle";
+
   // Function to use the user's GPS coordinates and geocode the address via Nominatim
   const handleUseGpsCoordinates = () => {
     if (navigator.geolocation) {
@@ -251,7 +254,7 @@ const Sidebar = ({
     const exportPoints = (baseAddress && followingAddresses.length > 0)
       ? ((window.route && window.route.optimizedPoints) ? window.route.optimizedPoints : [baseAddress, ...followingAddresses])
       : [];
-    if (exportPoints.length < 2) {
+    if (exportPoints.length < 2 || !vehicleSelected) {
       setDownloadGpxError("Please complete entries before downloading");
       return;
     }
@@ -301,7 +304,7 @@ const Sidebar = ({
 
   // Manage export to Google Maps
   const handleExportGoogle = () => {
-    if (!baseAddress || followingAddresses.length === 0) {
+    if (!baseAddress || followingAddresses.length === 0 || !vehicleSelected) {
       setExportGoogleError("Please complete entries before export");
       return;
     }
@@ -315,10 +318,10 @@ const Sidebar = ({
 
   // Reset messages as soon as entries are complete
   // These messages are displayed dynamically, depending on conditions
-  const exportGoogleMessage = entriesComplete
+  const exportGoogleMessage = (entriesComplete && vehicleSelected)
     ? "you can now export your itinerary to Google Maps"
     : "";
-  const downloadGpxMessage = entriesComplete
+  const downloadGpxMessage = (entriesComplete && vehicleSelected)
     ? "you can now download a gpx file of your itinerary"
     : "";
 
@@ -419,7 +422,7 @@ const Sidebar = ({
         <button className='exportButton' onClick={handleExportGoogle} >
           Export to Google Maps
         </button>
-        {!entriesComplete && exportGoogleError && (
+        {!(entriesComplete && vehicleSelected) && exportGoogleError && (
           <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', textAlign: 'center' }}>
             {exportGoogleError}
           </div>
@@ -432,7 +435,7 @@ const Sidebar = ({
         <button className='downloadButton' onClick={downloadGPX} >
           Download a GPX file
         </button>
-        {!entriesComplete && downloadGpxError && (
+        {!(entriesComplete && vehicleSelected) && downloadGpxError && (
           <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', textAlign: 'center' }}>
             {downloadGpxError}
           </div>
