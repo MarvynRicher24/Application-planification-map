@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Sidebar from './components/Sidebar';
-import MapView from './components/MapView';
+import Sidebar from './Sidebar'
+import MapView from './MapView'
 
 function App() {
-  const [baseAddress, setBaseAddress] = useState(null);
-  const [followingAddresses, setFollowingAddresses] = useState([]);
-  const [vehicle, setVehicle] = useState('chooseYourVehicle');
+  const [baseAddress, setBaseAddress] = useState(() => {
+    const saved = localStorage.getItem('baseAddress');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [followingAddresses, setFollowingAddresses] = useState(() => {
+    const saved = localStorage.getItem('followingAddresses');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [vehicle, setVehicle] = useState(() => localStorage.getItem('vehicle') || 'chooseYourVehicle');
   // 'route' will contain the geometry returned by OSRM and the optimized list of points.
   const [route, setRoute] = useState(null);
   const [totalDistance, setTotalDistance] = useState(0);
@@ -22,6 +28,16 @@ function App() {
     byFoot: { speed: 5, emission: 0 },
     bike: { speed: 15, emission: 6 }
   }), []);
+
+  // Save effects
+  useEffect(() => {
+    localStorage.setItem('vehicle', vehicle); }, [vehicle]);
+  useEffect(() => {
+    if (baseAddress) localStorage.setItem('baseAddress', JSON.stringify(baseAddress));
+    else localStorage.removeItem('baseAddress');
+  }, [baseAddress]);
+  useEffect(() => { localStorage.setItem('followingAddresses', JSON.stringify(followingAddresses)); },
+    [followingAddresses]);
 
   useEffect(() => {
     const fetchRouteData = async () => {

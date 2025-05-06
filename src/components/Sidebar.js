@@ -328,6 +328,19 @@ const Sidebar = ({
   // Optional backup to use route.optimizedPoints via window
   window.route = window.route || null;
 
+  // Reset functionality
+  const handleResetItinerary = () => {
+    setBaseAddress(null);
+    setFollowingAddresses([]);
+    setVehicle('chooseYourVehicle');
+    // Clean the localStorage
+    localStorage.removeItem('baseAddress');
+    localStorage.removeItem('followingAddresses');
+    localStorage.removeItem('vehicle');
+    setGpsUsed(false);
+    window.route = null;
+  };
+
   return (
     <div className="sidebar">
 
@@ -445,8 +458,10 @@ const Sidebar = ({
             {downloadGpxMessage}
           </div>
         )}
+        <button className='resetButton' onClick={handleResetItinerary} style={{ marginTop: '10px'}}>
+          Reset Itinerary
+        </button>
       </div>
-
     </div>
   );
 };
