@@ -6,6 +6,8 @@ The aim is to create a route planning tool (similar to Google Maps), but with a 
 - calculation of the ecological impact of the route according to the type of vehicle chosen.
 - export to Google Maps button
 - GPX file downloader button
+- local storage of the itinerary
+- complet reset button
 
 # Getting Started with Create React App
 
